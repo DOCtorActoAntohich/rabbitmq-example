@@ -1,0 +1,60 @@
+version: "3.9"
+
+services:
+  gusamon-producer:
+    container_name: gusamon-producer
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    env_file:
+      - .env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    command:
+      - "--produce"
+    restart: unless-stopped
+    networks:
+      gaming_net:
+
+
+  gusamon-consumer:
+    container_name: gusamon-consumer
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    env_file:
+      - .env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    command:
+      - "--consume"
+    restart: unless-stopped
+    networks:
+      gaming_net:
+
+
+  rabbitmq:
+    container_name: ${RABBITMQ_HOST}
+    image: rabbitmq:management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    restart: unless-stopped
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      gaming_net:
+
+
+networks:
+  gaming_net:
+    driver: bridge
